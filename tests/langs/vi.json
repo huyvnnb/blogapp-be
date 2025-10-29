@@ -1,0 +1,131 @@
+{
+  "sidebar": {
+    "home": "Trang chủ",
+    "new_post": "Tạo bài viết",
+    "dashboard": "Thống kê"
+  },
+  "navbar": {
+    "posts": "Bài viết",
+    "explore": "Khám phá",
+    "search": "Tìm kiếm",
+    "account": "Tài khoản",
+    "profile": "Hồ sơ",
+    "logout": "Đăng xuất"
+  },
+  "home": {
+    "read_more": "Đọc thêm",
+    "new_post": "Thêm bài viết",
+    "posts": "Bài viết"
+  },
+  "edit_page": {
+    "private": "Riêng tư",
+    "public": "Công khai",
+    "publish": "Xuất bản",
+    "draft": "Bản nháp",
+    "update": "Cập nhật",
+    "title_placeholder": "Tiêu đề bài viết",
+    "summary_placeholder": "Tóm tắt nội dung",
+    "content_placeholder": "Nội dung chính (Markdown được hỗ trợ)"
+  },
+  "admin_posts": {
+
+  },
+  "dashboard_page": {
+    "approved": "Đã duyệt",
+    "pending": "Chờ duyệt",
+    "rejected": "Từ chối",
+    "total": "Tổng",
+    "user_dashboard_title": "Trang quản lý",
+    "user_dashboard_desc": "Tổng quan về các bài viết và hoạt động của bạn",
+    "post_status": "Trạng thái bài viết",
+    "activity": "Hoạt động"
+  },
+  "export_dialog": {
+    "title": "Xuất báo cáo",
+    "desc": "Chọn các thông tin muốn xuất ra file Excel",
+    "select_all": "Chọn tất cả",
+    "deselect_all": "Bỏ chọn tất cả",
+    "cancel": "Hủy",
+    "export": "Xuất"
+  },
+  "export_dialog_key": {
+    "user_info": "Thông tin người dùng",
+    "avg_length": "Độ dài trung bình",
+    "export_posts": "Thông tin bài viết",
+    "total_posts": "Tổng số bài viết",
+    "approval_rate": "Tỉ lệ duyệt bài",
+    "post_id": "ID",
+    "post_title": "Tiêu đề",
+    "post_content": "Nội dung",
+    "post_summary": "Tóm tắt",
+    "post_user_id": "Người dùng",
+    "post_published": "Đã xuất bản",
+    "post_is_public": "Công khai",
+    "post_status": "Trạng thái",
+    "post_created_at": "Ngày tạo",
+    "post_updated_at": "Ngày cập nhật"
+  },
+  "month": {
+    "jan": "Tháng 1",
+    "feb": "Tháng 2",
+    "mar": "Tháng 3",
+    "apr": "Tháng 4",
+    "may": "Tháng 5",
+    "jun": "Tháng 6",
+    "jul": "Tháng 7",
+    "aug": "Tháng 8",
+    "sep": "Tháng 9",
+    "oct": "Tháng 10",
+    "nov": "Tháng 11",
+    "dec": "Tháng 12"
+  },
+  "admin": {
+    "home": {
+      "home": "Trang chủ",
+      "post_manage": "Quản lý bài viết",
+      "post_manage_desc": "Kiểm duyệt, duyệt hoặc xóa các bài viết của người dùng",
+      "admin_dashboard": "Trang quản trị",
+      "access": "Truy cập",
+      "logout": "Đăng xuất"
+    },
+    "posts": {
+      "statistics": "Thống kê",
+      "post_ratio": "Tỉ lệ bài viết theo trạng thái",
+      "approve": "Đã duyệt",
+      "pending": "Chờ duyệt",
+      "reject": "Từ chối",
+      "daily": "Theo ngày",
+      "weekly": "Theo tuần",
+      "monthly": "Theo tháng",
+      "yearly": "Theo năm",
+      "pending_title": "Bài viết chờ duyệt",
+      "title": "Tiêu đề",
+      "author": "Tác giả",
+      "created": "Ngày tạo",
+      "status": "Trạng thái",
+      "action": "Hành động"
+    }
+  },
+  "range": {
+    "daily": {
+      "7": "7 ngày",
+      "14": "14 ngày",
+      "30": "30 ngày"
+    },
+    "weekly": {
+      "5": "5 tuần",
+      "10": "10 tuần",
+      "15": "15 tuần"
+    },
+    "monthly": {
+      "3": "3 tháng",
+      "6": "6 tháng",
+      "12": "12 tháng"
+    },
+    "yearly": {
+      "3": "3 năm",
+      "5": "5 năm",
+      "10": "10 năm"
+    }
+  }
+}

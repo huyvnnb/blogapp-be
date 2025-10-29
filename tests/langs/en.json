@@ -1,0 +1,131 @@
+{
+  "sidebar": {
+    "home": "Home",
+    "new_post": "New post",
+    "dashboard": "Dashboard"
+  },
+  "navbar": {
+    "posts": "Posts",
+    "explore": "Explore",
+    "search": "Search",
+    "account": "Account",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "home": {
+    "read_more": "Read more",
+    "new_post": "New post",
+    "posts": "Posts"
+  },
+  "edit_page": {
+    "private": "Private",
+    "public": "Public",
+    "publish": "Publish",
+    "draft": "Draft",
+    "update": "Update",
+    "title_placeholder": "Post title",
+    "summary_placeholder": "Summary",
+    "content_placeholder": "Main content (Markdown supported)"
+  },
+  "dashboard_page": {
+    "approved": "Approved",
+    "pending": "Pending",
+    "rejected": "Rejected",
+    "total": "Total",
+    "user_dashboard_title": "User Dashboard",
+    "user_dashboard_desc": "Overview of your posts and activities",
+    "post_status": "Post Status",
+    "activity": "Activity"
+  },
+  "admin_posts": {
+
+  },
+  "export_dialog": {
+    "title": "Export Report",
+    "desc": "Select the information you want to export to an Excel file",
+    "select_all": "Select all",
+    "deselect_all": "Deselect all",
+    "cancel": "Cancel",
+    "export": "Export"
+  },
+  "export_dialog_key": {
+    "user_info": "User information",
+    "avg_length": "Average length",
+    "export_posts": "Post information",
+    "total_posts": "Total posts",
+    "approval_rate": "Approval rate",
+    "post_id": "ID",
+    "post_title": "Title",
+    "post_content": "Content",
+    "post_summary": "Summary",
+    "post_user_id": "User ID",
+    "post_published": "Published",
+    "post_is_public": "Public",
+    "post_status": "Status",
+    "post_created_at": "Created",
+    "post_updated_at": "Updated"
+  },
+  "month": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "May",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Oct",
+    "nov": "Nov",
+    "dec": "Dec"
+  },
+  "admin": {
+    "home": {
+      "home": "Home",
+      "post_manage": "Post Management",
+      "post_manage_desc": "Moderate, approve, or delete user posts",
+      "admin_dashboard": "Admin Dashboard",
+      "access": "Access",
+      "logout": "Logout"
+    },
+    "posts": {
+      "statistics": "Statistics",
+      "post_ratio": "Post Status Ratio",
+      "approve": "Approved",
+      "pending": "Pending",
+      "reject": "Rejected",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "pending_title": "All pending posts",
+      "title": "Title",
+      "author": "Author",
+      "created": "Created At",
+      "status": "Status",
+      "action": "Action"
+    }
+  },
+  "range": {
+    "daily": {
+      "7": "7 days",
+      "14": "14 days",
+      "30": "30 days"
+    },
+    "weekly": {
+      "5": "5 weeks",
+      "10": "10 weeks",
+      "15": "15 weeks"
+    },
+    "monthly": {
+      "3": "3 months",
+      "6": "6 months",
+      "12": "12 months"
+    },
+    "yearly": {
+      "3": "3 years",
+      "5": "5 years",
+      "10": "10 years"
+    }
+  }
+}
