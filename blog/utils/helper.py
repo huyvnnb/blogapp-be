@@ -10,7 +10,7 @@ import bcrypt
 
 from blog import ApiError, db
 from blog.exception import NotFound, Unauthorized, Forbidden
-from blog.users.schema import UserResponse, Me
+from blog.users.schema import Me
 
 
 def get_password_hash(password: str) -> str:
@@ -169,40 +169,40 @@ def get_token_jti(token: str):
         return payload['jti']
 
 
-def token_require(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        auth_header = request.headers.get("Authorization", None)
-
-        if not auth_header:
-            raise Unauthorized("Please login first")
-
-        try:
-            parts = auth_header.split(" ")
-            if parts[0].lower() != 'bearer' or len(parts) != 2:
-                raise Unauthorized("Invalid token")
-
-            token = parts[1]
-            user_id = verify_access_token(token)
-            if not user_id:
-                raise Unauthorized("Invalid token")
-
-            from blog.users import Users
-            user = Users.query.filter(Users.id == user_id).first()
-            if not user:
-                raise NotFound("User not found")
-
-            return f(
-                user=Me(user_id=user.id, username=user.username, display_name=user.display_name),
-                *args, **kwargs
-            )
-        except jwt.ExpiredSignatureError as e:
-            raise e
-
-        except jwt.InvalidTokenError as e:
-            raise e
-
-    return wrapper
+# def token_require(f):
+#     @wraps(f)
+#     def wrapper(*args, **kwargs):
+#         auth_header = request.headers.get("Authorization", None)
+#
+#         if not auth_header:
+#             raise Unauthorized("Please login first")
+#
+#         try:
+#             parts = auth_header.split(" ")
+#             if parts[0].lower() != 'bearer' or len(parts) != 2:
+#                 raise Unauthorized("Invalid token")
+#
+#             token = parts[1]
+#             user_id = verify_access_token(token)
+#             if not user_id:
+#                 raise Unauthorized("Invalid token")
+#
+#             from blog.users import Users
+#             user = Users.query.filter(Users.id == user_id).first()
+#             if not user:
+#                 raise NotFound("User not found")
+#
+#             return f(
+#                 user=Me(user_id=user.id, username=user.username, display_name=user.display_name),
+#                 *args, **kwargs
+#             )
+#         except jwt.ExpiredSignatureError as e:
+#             raise e
+#
+#         except jwt.InvalidTokenError as e:
+#             raise e
+#
+#     return wrapper
 
 
 def is_token_revoked(jti: str) -> bool:
@@ -210,7 +210,7 @@ def is_token_revoked(jti: str) -> bool:
     return RevokedToken.query.filter_by(jti=jti).first() is not None
 
 
-def token_require_with_check_revoked(f):
+def token_require(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         auth_header = request.headers.get("Authorization", None)
@@ -230,7 +230,6 @@ def token_require_with_check_revoked(f):
                 raise Unauthorized("Invalid token")
 
             jti = get_token_jti(token)
-            print(f"JTI: {jti}")
             if is_token_revoked(jti):
                 raise Unauthorized("Token has been revoked")
 
@@ -243,10 +242,10 @@ def token_require_with_check_revoked(f):
                 user=Me(user_id=user.id, username=user.username, display_name=user.display_name),
                 *args, **kwargs
             )
-        except jwt.ExpiredSignatureError as e:
+        except jwt.ExpiredSignatureError:
             raise Unauthorized("Token has expired")
 
-        except jwt.InvalidTokenError as e:
+        except jwt.InvalidTokenError:
             raise Unauthorized("Invalid token")
 
     return wrapper
@@ -274,11 +273,3 @@ def role_require(*required_role):
         return wrapper
 
     return decorator
-
-
-# def require_permission(*require_permission):
-#     def decorator(f):
-#         @wraps
-#         def wrapper(*args, **kwargs):
-#             user = kwargs.get("user")
-

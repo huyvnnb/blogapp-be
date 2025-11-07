@@ -1,12 +1,14 @@
+import pytest
 from playwright.sync_api import Page, APIRequestContext
 
+from tests.messages import Message
 from tests.pages import HomePage
 from tests.test_user_auth import _login
+from tests.testcase_helper import log_test_result
 
-# base_url = "http://localhost:3000"
 
-
-def test_logout(page: Page, api_request: APIRequestContext, test_factory, base_data):
+@log_test_result(test_case_ids="TC3")
+def test_logout(page: Page, api_request: APIRequestContext, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
     response = _login(page, payload={'username': user.username, 'password': password})
@@ -17,19 +19,25 @@ def test_logout(page: Page, api_request: APIRequestContext, test_factory, base_d
         revoked_token = None
 
     home_page = HomePage(page)
+    home_page.menu_option.wait_for(state="visible", timeout=5000)
     home_page.menu_option.click()
     home_page.logout()
+    import time
+    time.sleep(1)
 
     response = api_request.get(
         "/users/me",
         headers={"Authorization": f"Bearer {revoked_token}"}
     )
-    print(f"Response: {response}")
+    actual_status = response.status
 
-    assert response.status == 401, f"Expect 401, got {response.status}"
+    return [
+        (Message.STATUS, 401, actual_status)
+    ]
 
 
-def test_user_approve_post(page, api_request, test_factory, base_data):
+@log_test_result(test_case_ids="TC18")
+def test_user_approve_post(page, api_request, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     post = test_factory.create_post(
         user,
@@ -48,4 +56,6 @@ def test_user_approve_post(page, api_request, test_factory, base_data):
         headers={"Authorization": f"Bearer {revoked_token}"}
     )
 
-    assert response.status == 403
+    return [
+        (Message.STATUS, 403, response.status)
+    ]

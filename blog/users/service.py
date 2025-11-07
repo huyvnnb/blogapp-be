@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from flask import request
@@ -8,7 +9,7 @@ from blog.base.service import CRUDTemplate
 from blog.exception import NotFound, Unauthorized, ApiError, ServerError
 from blog.posts import Posts
 from blog.posts.model import PostStatus
-from blog.users.model import Users, Role
+from blog.users.model import Users, Role, RevokedToken
 from blog.users.schema import UserCreate, UserLogin, LoginResponse, UserResponse, UserRegister, RefreshRequest, \
     RefreshResponse, UserEffective, UserPublicResponse
 from blog.utils.helper import get_password_hash, verify_password, create_access_token, verify_refresh_token, \
@@ -112,6 +113,13 @@ class AuthService:
                 display_name=existed_user.display_name
             )
         ), refresh_token
+
+    @classmethod
+    def revoke_token(cls, jti: str):
+        jti = uuid.UUID(jti)
+        revoked = RevokedToken(jti=jti)
+        db.session.add(revoked)
+        db.session.commit()
 
     @classmethod
     def refresh_token(cls):

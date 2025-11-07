@@ -1,14 +1,19 @@
 import json
+from itertools import zip_longest
 from pathlib import Path
 
 import pytest
-import unicodedata
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from tests.endpoints import Post, Auth, Dashboard, Admin
-from tests.pages import HomePage, norm, EditorPage, DashboardPage, AdminPage
+from tests.messages import NavbarMsg, HomeMsg, EditMsg, DashboardMsg, DialogMsg, AdminHomeMsg, PostManageMsg
+from tests.pages import HomePage, EditorPage, DashboardPage, AdminPage
 from tests.test_admin_page import _admin_login
 from tests.test_user_auth import _login
+from tests.testcase_helper import log_test_result
+import logging
+
+logger = logging.getLogger()
 
 
 def load_lang(lang: str):
@@ -17,14 +22,6 @@ def load_lang(lang: str):
     with open(base_dir / f"{lang}.json", encoding="utf-8") as f:
         data = json.load(f)
 
-    # def normalize_dict(d):
-    #     for k, v in d.items():
-    #         if isinstance(v, dict):
-    #             normalize_dict(v)
-    #         elif isinstance(v, str):
-    #             d[k] = unicodedata.normalize("NFC", v)
-    #
-    # normalize_dict(data)
     return data
 
 
@@ -45,7 +42,8 @@ def assert_text_equal(actual: str, expected: str):
     assert a == e, f"Expected '{e}', got '{a}'"
 
 
-def test_ml_bar(page: Page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC19", "TC20"])
+def test_ml_bar(page: Page, test_factory, base_data, lang, lang_map, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     _login(page, payload={'username': user.username, 'password': password})
 
@@ -54,14 +52,17 @@ def test_ml_bar(page: Page, test_factory, base_data, lang, lang_map):
     navbar = lang_map["navbar"]
     sidebar = lang_map["sidebar"]
 
-    assert_text_equal(home_page.menu_posts, navbar["posts"])
-    assert_text_equal(home_page.menu_explore, navbar["explore"])
-    assert_text_equal(home_page.sidebar_home, sidebar["home"])
-    assert_text_equal(home_page.sidebar_new_post, sidebar["new_post"])
-    assert_text_equal(home_page.sidebar_dashboard, sidebar["dashboard"])
+    return [
+        (NavbarMsg.POST_ITEM, navbar["posts"], home_page.menu_posts),
+        (NavbarMsg.EXPLORE_ITEM, navbar["explore"], home_page.menu_explore),
+        (NavbarMsg.SIDEBAR_HOME, sidebar["home"], home_page.sidebar_home),
+        (NavbarMsg.SIDEBAR_NEW_POST, sidebar["new_post"], home_page.sidebar_new_post),
+        (NavbarMsg.SIDEBAR_DASHBOARD, sidebar["dashboard"], home_page.sidebar_dashboard)
+    ]
 
 
-def test_ml_home(page: Page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC21", "TC22"])
+def test_ml_home(page: Page, test_factory, base_data, lang, lang_map, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     test_factory.create_post(user)
     _login(page, payload={'username': user.username, 'password': password})
@@ -70,11 +71,14 @@ def test_ml_home(page: Page, test_factory, base_data, lang, lang_map):
     home_page.choose_lang(lang)
     home = lang_map["home"]
 
-    assert_text_equal(home_page.new_post, home["new_post"])
-    assert_text_equal(home_page.page_title, home["posts"])
+    return [
+        (HomeMsg.HOME_TITLE, home["posts"], home_page.page_title),
+        (HomeMsg.BTN_NEW_POST, home["new_post"], home_page.new_post)
+    ]
 
 
-def test_ml_edit_page(page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC23", "TC24"])
+def test_ml_edit_page(page, test_factory, base_data, lang, lang_map, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     post = test_factory.create_post(user)
     _login(page, payload={'username': user.username, 'password': password})
@@ -85,21 +89,29 @@ def test_ml_edit_page(page, test_factory, base_data, lang, lang_map):
     editor_page.choose_lang(lang)
     edit = lang_map["edit_page"]
 
-    assert_text_equal(editor_page.publish_btn_text, edit["publish"])
-    assert_text_equal(editor_page.draft_btn_text, edit["draft"])
-    assert_text_equal(editor_page.title_placeholder, edit["title_placeholder"])
-    assert_text_equal(editor_page.summary_placeholder, edit["summary_placeholder"])
-    assert_text_equal(editor_page.content_placeholder, edit["content_placeholder"])
+    compare_values = []
+
+    compare_values.extend([
+        (EditMsg.BTN_PUBLISH, edit["publish"], editor_page.publish_btn_text),
+        (EditMsg.BTN_DRAFT, edit["draft"], editor_page.draft_btn_text),
+        (EditMsg.TITLE_PLACEHOLDER, edit["title_placeholder"], editor_page.title_placeholder),
+        (EditMsg.SUMMARY_PLACEHOLDER, edit["summary_placeholder"], editor_page.summary_placeholder),
+        (EditMsg.CONTENT_PLACEHOLDER, edit["content_placeholder"], editor_page.content_placeholder)
+    ])
 
     page.goto(Auth.HOME)
     home_page = HomePage(page)
     post_item = home_page.post_item_by_article(post.title)
     home_page.edit_btn(post_item).click()
 
-    assert_text_equal(editor_page.update_btn_text, edit["update"])
+    compare_values.append(
+        (EditMsg.BTN_UPDATE, edit["update"], editor_page.update_btn_text)
+    )
+    return compare_values
 
 
-def test_ml_user_dashboard(page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC25", "TC26"])
+def test_ml_user_dashboard(page, test_factory, base_data, lang, lang_map, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     _login(page, payload={'username': user.username, 'password': password})
 
@@ -108,23 +120,37 @@ def test_ml_user_dashboard(page, test_factory, base_data, lang, lang_map):
     dashboard_page.choose_lang(lang)
     dashboard = lang_map["dashboard_page"]
 
-    assert_text_equal(dashboard_page.dashboard_title, dashboard["user_dashboard_title"])
-    assert_text_equal(dashboard_page.dashboard_desc, dashboard["user_dashboard_desc"])
+    compare_value = [
+        (DashboardMsg.DASHBOARD_TITLE, dashboard["user_dashboard_title"], dashboard_page.dashboard_title),
+        (DashboardMsg.DASHBOARD_DESC, dashboard["user_dashboard_desc"], dashboard_page.dashboard_desc),
+        # (DashboardMsg.APPROVE_CARD, dashboard["approved"], dashboard_page.approved_card_text),
+        # (DashboardMsg.PENDING_CARD, dashboard["pending"], dashboard_page.pending_card_text),
+        # (DashboardMsg.REJECT_CARD, dashboard["rejected"], dashboard_page.rejected_card_text),
+        # (DashboardMsg.TOTAL_CARD, dashboard["total"], dashboard_page.total_card_text),
+        (DashboardMsg.ACTIVITY_TITLE, dashboard["activity"], dashboard_page.activity_text)
+    ]
 
-    assert_text_equal(dashboard_page.approved_card_text, dashboard["approved"])
-    assert_text_equal(dashboard_page.pending_card_text, dashboard["pending"])
-    assert_text_equal(dashboard_page.rejected_card_text, dashboard["rejected"])
-    assert_text_equal(dashboard_page.total_card_text, dashboard["total"])
+    expect_card = [dashboard["approved"], dashboard["pending"], dashboard["rejected"], dashboard["total"]]
+    actual_card = [dashboard_page.approved_card_text, dashboard_page.pending_card_text, dashboard_page.rejected_card_text, dashboard_page.total_card_text]
+    compare_value.append(
+        (DashboardMsg.POST_STATISTICS, expect_card, actual_card)
+    )
 
-    assert_text_equal(dashboard_page.activity_text, dashboard["activity"])
-
-    expected_month = lang_map["month"].values()
+    expected_month = list(lang_map["month"].values())
     actual_month = dashboard_page.month_text_list
-    for i in range(len(expected_month)):
-        assert_text_equal(actual_month[i], actual_month[i])
+    compare_value.append(
+        (DashboardMsg.MONTH_COL, expected_month, actual_month)
+    )
+    # for i in range(len(expected_month)):
+    #     compare_value.append(
+    #         (DashboardMsg.MONTH_COL.format(num=i+1), expected_month[i], actual_month[i])
+    #     )
+
+    return compare_value
 
 
-def test_ml_export_dialog(page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC27", "TC28"])
+def test_ml_export_dialog(page, test_factory, base_data, lang, lang_map, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     _login(page, payload={'username': user.username, 'password': password})
 
@@ -137,22 +163,44 @@ def test_ml_export_dialog(page, test_factory, base_data, lang, lang_map):
     dialog_map = lang_map["export_dialog"]
     keys = dialog_key.keys()
 
-    assert_text_equal(dashboard_page.select_all_btn_text, dialog_map["select_all"])
+    actual_select_all_before = dashboard_page.select_all_btn_text
     dashboard_page.select_all_btn.click()
-    assert_text_equal(dashboard_page.select_all_btn_text, dialog_map["deselect_all"])
+    actual_select_all_after = dashboard_page.select_all_btn_text
 
-    assert_text_equal(dashboard_page.select_all_post_fields_text, dialog_map["select_all"])
+    actual_select_post_fields_before = dashboard_page.select_all_post_fields_text
     dashboard_page.select_all_post_fields.click()
-    assert_text_equal(dashboard_page.select_all_post_fields_text, dialog_map["deselect_all"])
+    actual_select_post_fields_after = dashboard_page.select_all_post_fields_text
 
+    compare_values = []
+
+    compare_values.extend([
+        (DialogMsg.BTN_SELECT_ALL, dialog_map["select_all"], actual_select_all_before),
+        (DialogMsg.BTN_DESELECT_ALL, dialog_map["deselect_all"], actual_select_all_after),
+        (DialogMsg.BTN_POST_SELECT_ALL, dialog_map["select_all"],  actual_select_post_fields_before),
+        (DialogMsg.BTN_POST_DESELECT_ALL, dialog_map["deselect_all"], actual_select_post_fields_after),
+        (DialogMsg.BTN_CANCEL, dialog_map["cancel"], dashboard_page.dialog_cancel_btn_text),
+        (DialogMsg.BTN_EXPORT, dialog_map["export"], dashboard_page.dialog_export_btn_text)
+    ])
+
+    expected_fields = []
+    actual_fields = []
     for key in keys:
-        assert_text_equal(dashboard_page.label_text(key), dialog_key[key])
+        expected_fields.append(dialog_key[key])
+        actual_fields.append(dashboard_page.label_text((key)))
 
-    assert_text_equal(dashboard_page.dialog_cancel_btn_text, dialog_map["cancel"])
-    assert_text_equal(dashboard_page.dialog_export_btn_text, dialog_map["export"])
+    compare_values.append(
+        ("", expected_fields, actual_fields)
+    )
+    # for key in keys:
+    #     compare_values.append(
+    #         (DialogMsg.LABEL.format(name=dialog_key[key].lower()), dialog_key[key], dashboard_page.label_text(key))
+    #     )
+
+    return compare_values
 
 
-def test_ml_admin_home(page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC29", "TC30"])
+def test_ml_admin_home(page, test_factory, base_data, lang, lang_map, test_report_file):
     admin, admin_pw = test_factory.create_user(base_data["role_ids"]["admin"])
     _admin_login(page, payload={"username": admin.username, "password": admin_pw})
 
@@ -161,18 +209,21 @@ def test_ml_admin_home(page, test_factory, base_data, lang, lang_map):
 
     home = lang_map["admin"]["home"]
 
-    assert_text_equal(admin_page.logout_btn_text, home["logout"])
-    assert_text_equal(admin_page.post_manage_card_title, home["post_manage"])
-    assert_text_equal(admin_page.post_manage_card_desc, home["post_manage_desc"])
-    assert_text_equal(admin_page.home_title, home["admin_dashboard"])
-    assert_text_equal(admin_page.post_manage_card_btn_text, home["access"])
-    assert_text_equal(admin_page.home_text, home["home"])
-    assert_text_equal(admin_page.post_management_text, home["post_manage"])
+    return [
+        (AdminHomeMsg.HOME_TITLE, home["admin_dashboard"], admin_page.home_title),
+        (AdminHomeMsg.BTN_LOGOUT, home["logout"], admin_page.logout_btn_text),
+        (AdminHomeMsg.POST_MANAGE_CARD_TITLE, home["post_manage"], admin_page.post_manage_card_title),
+        (AdminHomeMsg.POST_MANAGE_CARD_DESC, home["post_manage_desc"], admin_page.post_manage_card_desc),
+        (AdminHomeMsg.BTN_ACCESS, home["access"], admin_page.post_manage_card_btn_text),
+        (AdminHomeMsg.BTN_HOME, home["home"], admin_page.home_text),
+        (AdminHomeMsg.BTN_POST_MANAGE, home["post_manage"], admin_page.post_management_text)
+    ]
 
 
-def test_ml_admin_post_manage(page, test_factory, base_data, lang, lang_map):
+@log_test_result(test_case_ids=["TC31", "TC32"])
+def test_ml_admin_post_manage(page: Page, test_factory, base_data, lang, lang_map, test_report_file):
     admin, admin_pw = test_factory.create_user(base_data["role_ids"]["admin"])
-    user, password = test_factory.create_user(base_data["role_ids"]["user"])
+    user, _ = test_factory.create_user(base_data["role_ids"]["user"])
     test_factory.create_post(
         user,
         status="PENDING"
@@ -180,30 +231,35 @@ def test_ml_admin_post_manage(page, test_factory, base_data, lang, lang_map):
     _admin_login(page, payload={"username": admin.username, "password": admin_pw})
 
     page.goto(Admin.POST_MANAGE)
+    page.wait_for_load_state("networkidle")
     admin_page = AdminPage(page)
     admin_page.choose_lang(lang)
     posts = lang_map["admin"]["posts"]
 
-    assert_text_equal(admin_page.post_stats_card_title, posts["statistics"])
-    assert_text_equal(admin_page.post_ratio_card_title, posts["post_ratio"])
-    assert_text_equal(admin_page.post_pending_card_title, posts["pending_title"])
+    compare_values = []
+
+    compare_values.extend([
+        (PostManageMsg.POST_STATISTICS_TITLE, posts["statistics"], admin_page.post_stats_card_title),
+        (PostManageMsg.POST_STATUS_TITLE, posts["post_ratio"], admin_page.post_ratio_card_title),
+        (PostManageMsg.POST_PENDING_LIST, posts["pending_title"], admin_page.post_pending_card_title)
+    ])
 
     expect_header = [posts["title"], posts["author"], posts["created"], posts["status"], posts["action"]]
     actual_header = admin_page.table_header_list
 
-    for i in range(len(expect_header)):
-        assert_text_equal(actual_header[i], expect_header[i])
+    compare_values.append((PostManageMsg.POST_HEADER, expect_header, actual_header))
 
     expect_ratio_attributes = [posts["approve"], posts["pending"], posts["reject"]]
     actual_ratio_attributes = admin_page.post_ratio_attribute
-
-    for i in range(len(expect_ratio_attributes)):
-        assert_text_equal(expect_ratio_attributes[i], actual_ratio_attributes[i])
+    compare_values.append(
+        (PostManageMsg.RATIO_ATTRIBUTE, expect_ratio_attributes, actual_ratio_attributes)
+    )
 
     time_range = lang_map["range"]
-    expect_case = [list(time_range[k].values()) for k in ["daily", "weekly", "monthly", "yearly"]]
+    options = ["daily", "weekly", "monthly", "yearly"]
+    expect_case = [list(time_range[k].values()) for k in options]
 
-    for i in range(4):
+    for i in range(len(options)):
         admin_page.dropdown_menu(0).click()
         admin_page.dropdown_option.nth(i).click()
         admin_page.dropdown_menu(1).click()
@@ -211,15 +267,18 @@ def test_ml_admin_post_manage(page, test_factory, base_data, lang, lang_map):
         case = expect_case[i]
         actual = admin_page.dropdown_option_list
 
-        print(f"Case: {case}")
-        print(f"Actual: {actual}")
-        for j in range(len(case)):
-            assert_text_equal(actual[j], case[j])
+        compare_values.extend([
+            (PostManageMsg.OPTION_TYPE.format(name=options[i]), "", ""),
+            (PostManageMsg.TIME_CASE, case, actual)
+        ])
 
         admin_page.page.keyboard.press("Escape")
         # admin_page.page.wait_for_selector("[data-state='open']", state="detached")
 
     admin_page.dropdown_menu(2).click()
-    post_status_list = admin_page.dropdown_option_list
-    assert post_status_list == [posts["approve"], posts["reject"]]
+    actual_post_status_list = admin_page.dropdown_option_list
+    expect_post_status_list = [posts["approve"], posts["reject"]]
+    compare_values.append(('', expect_post_status_list, actual_post_status_list))
+
+    return compare_values
 

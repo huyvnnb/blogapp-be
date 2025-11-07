@@ -1,8 +1,10 @@
 from playwright.sync_api import Page, expect
 
 from tests.endpoints import Admin
+from tests.messages import Message, PostManageMsg
 from tests.pages import AdminPage, HomePage
 from tests.test_user_auth import _login
+from tests.testcase_helper import log_test_result, compare_set
 
 
 def _admin_login(page: Page, payload: dict):
@@ -16,34 +18,35 @@ def _admin_login(page: Page, payload: dict):
     return resp_info
 
 
-def test_admin_login(page: Page, test_factory, base_data):
+@log_test_result(test_case_ids="TC13")
+def test_admin_login(page: Page, test_factory, base_data, test_report_file):
     admin, password = test_factory.create_user(base_data["role_ids"]["admin"])
 
     resp_infp = _admin_login(page, payload={"username": admin.username, "password": password})
 
     response = resp_infp.value
 
-    assert response.status == 200
-    # page.get_by_test_id("admin-username").fill(admin.username)
-    # page.get_by_test_id("admin-password").fill("password")
-    # with page.expect_response("**/admin/login") as resp_info:
-    #     page.get_by_test_id("admin-login-btn").click()
-    # response = resp_info.value
-    #
-    # assert response.status == 200
+    return [
+        (Message.STATUS, 200, response.status)
+    ]
 
 
-def test_user_login_admin(page: Page, db_session, base_data, test_factory):
+@log_test_result(test_case_ids="TC14")
+def test_user_login_admin(page: Page, db_session, base_data, test_factory, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
     resp_info = _admin_login(page, payload={"username": user.username, "password": password})
 
     response = resp_info.value
-    assert response.status == 403
+
+    return [
+        (Message.STATUS, 403, response.status)
+    ]
 
 
-def test_pending_list(page: Page, test_factory, base_data):
-    user, user_pw = test_factory.create_user(base_data["role_ids"]["user"])
+@log_test_result(test_case_ids="TC15")
+def test_pending_list(page: Page, test_factory, base_data, test_report_file):
+    user, _ = test_factory.create_user(base_data["role_ids"]["user"])
     admin, admin_pw = test_factory.create_user(base_data["role_ids"]["admin"])
 
     approve_count = 5
@@ -80,10 +83,17 @@ def test_pending_list(page: Page, test_factory, base_data):
     _admin_login(page, payload={"username": admin.username, "password": admin_pw})
 
     page.goto(Admin.POST_MANAGE)
+    page.wait_for_load_state("networkidle")
     admin_page = AdminPage(page)
 
+    compare_values = []
+
     pending_list = admin_page.pending_list
-    expect(pending_list).to_have_count(pending_count)
+    # expect(pending_list).to_have_count(pending_count)
+    actual_count = pending_list.count()
+    compare_values.append(
+        (PostManageMsg.PENDING_LIST_COUNT, pending_count, actual_count)
+    )
 
     expect_title = {post.title for post in pending_posts}
     count = pending_list.count()
@@ -93,10 +103,18 @@ def test_pending_list(page: Page, test_factory, base_data):
         for i in range(count)
     }
 
-    assert expect_title == actual_title
+    values = compare_set(expect_title, actual_title)
+    for value in values:
+        expect_item, actual_item = value
+        compare_values.append(
+            (PostManageMsg.POST_TITLE, expect_item, actual_item)
+        )
+
+    return compare_values
 
 
-def test_approve_post(page: Page, test_factory, base_data):
+@log_test_result(test_case_ids="TC16")
+def test_approve_post(page: Page, test_factory, base_data, test_report_file):
     user, user_pw = test_factory.create_user(base_data["role_ids"]["user"])
     admin, admin_pw = test_factory.create_user(base_data["role_ids"]["admin"])
 
@@ -115,7 +133,7 @@ def test_approve_post(page: Page, test_factory, base_data):
         admin_page.approve(pending_item)
 
     response = resp_info.value
-    assert response.status == 200
+    compare_values = [(Message.STATUS, 200, response.status)]
 
     page.goto(Admin.HOME)
     admin_page.logout()
@@ -125,11 +143,15 @@ def test_approve_post(page: Page, test_factory, base_data):
 
     home_page = HomePage(page)
     post_item = home_page.post_item_by_article(pending_post.title)
-    assert home_page.post_title(post_item) == pending_post.title
-    assert home_page.badge(post_item, 0) == "Approved"
+    compare_values.append(
+        (Message.BADGE_APPROVE, "Approved", home_page.badge(post_item, 0))
+    )
+
+    return compare_values
 
 
-def test_reject_post(page: Page, test_factory, base_data):
+@log_test_result(test_case_ids="TC17")
+def test_reject_post(page: Page, test_factory, base_data, test_report_file):
     user, user_pw = test_factory.create_user(base_data["role_ids"]["user"])
     admin, admin_pw = test_factory.create_user(base_data["role_ids"]["admin"])
 
@@ -148,7 +170,7 @@ def test_reject_post(page: Page, test_factory, base_data):
         admin_page.reject(pending_item)
 
     response = resp_info.value
-    assert response.status == 200
+    compare_values = [(Message.STATUS, 200, response.status)]
 
     page.goto(Admin.HOME)
     logout_btn = admin_page.logout_btn
@@ -160,5 +182,7 @@ def test_reject_post(page: Page, test_factory, base_data):
 
     home_page = HomePage(page)
     post_item = home_page.post_item_by_article(pending_post.title)
-    assert home_page.post_title(post_item) == pending_post.title
-    assert home_page.badge(post_item, 0) == "Rejected"
+    compare_values.append(
+        (Message.BADGE_APPROVE, "Rejected", home_page.badge(post_item, 0))
+    )
+    return compare_values

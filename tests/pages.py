@@ -71,12 +71,20 @@ class NavBar:
     def multi_lang(self) -> Locator:
         return self.header.locator("button[data-slot='dropdown-menu-trigger']").nth(0)
 
-    def choose_lang(self, lang: str = "vi"):
+    def choose_lang(self, lang: str = "en"):
         self.multi_lang.click()
-        if lang == "vi":
-            self.page.locator("div[role='menuitem']").nth(0).click()
-        else:
-            self.page.locator("div[role='menuitem']").nth(1).click()
+        self.page.locator(f"#{lang}").click()
+        # if lang == "vi":
+        #     self.page.locator("div[role='menuitem']").nth(0).click()
+        # else:
+        #     self.page.locator("div[role='menuitem']").nth(1).click()
+
+    # def choose_lang(self, lang: str = "en"):
+    #     self.multi_lang.click()
+    #     if lang == "vi":
+    #         self.page.locator("div[role='menuitem']").nth(0).click()
+    #     else:
+    #         self.page.locator("div[role='menuitem']").nth(1).click()
 
 
 class HomePage(NavBar):
@@ -106,6 +114,10 @@ class HomePage(NavBar):
 
     def all_post_items(self):
         return self.page.locator("[data-slot='card']")
+
+    @property
+    def toast(self):
+        return self.page.locator("div.Toastify__toast[role='alert']").first
 
     # Multi-language component
     @property

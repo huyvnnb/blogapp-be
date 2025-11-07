@@ -5,9 +5,11 @@ from blog.posts.service import PostService
 from blog.users import Users
 from blog.users.schema import UserCreate, UserRegister, Me, UserLogin, UserResponse, RefreshRequest, UserPublicResponse
 from blog.users.service import UserService, AuthService
-from blog.utils.helper import get_password_hash, token_require
+from blog.utils.helper import get_password_hash, token_require, get_token_jti, get_jwt_token
 from blog.utils.response import success
+import logging
 
+logger = logging.getLogger()
 user_bp = Blueprint("users", __name__, url_prefix="/users")
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -98,8 +100,20 @@ def logout(user):
     resp = success(message="Logout successfully")
     response = make_response(resp)
     response.delete_cookie('refresh_token')
-
+    token = get_jwt_token()
+    jti = get_token_jti(token)
+    logger.info(f"Revoked token with jti: {jti}")
+    AuthService.revoke_token(jti)
     return response
+
+# @auth_bp.route("/logout", methods=["POST"])
+# @token_require
+# def logout(user):
+#     resp = success(message="Logout successfully")
+#     response = make_response(resp)
+#     response.delete_cookie('refresh_token')
+#
+#     return response
 
 
 @auth_bp.route("/register", methods=["POST"])

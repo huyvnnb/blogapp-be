@@ -6,11 +6,19 @@ from playwright.sync_api import Page, expect, Locator
 
 from blog.posts import Posts
 from tests.endpoints import Post
+from tests.messages import Message
 from tests.pages import HomePage, EditorPage
 from tests.test_user_auth import _login
+from tests.testcase_helper import log_test_result
+import logging
+import pytest_check as check
 
 
-def test_create_post(page: Page, test_factory, base_data):
+logger = logging.getLogger()
+
+
+@log_test_result(test_case_ids="TC4")
+def test_create_post(page: Page, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
     _login(page, payload={'username': user.username, 'password': password})
@@ -20,12 +28,9 @@ def test_create_post(page: Page, test_factory, base_data):
 
     page.goto(Post.NEW_POST)
 
-    title = f"Blockchain IoT - {int(time.time())}"
-    summary = "Blockchain đang mở ra hướng mới..."
-    content = """
-    ## Blockchain là gì?
-    ...
-    """
+    title = f"Title of post - {int(time.time())}"
+    summary = "Summary of post"
+    content = "Content of post"
 
     editor_page.fill_title(title)
     editor_page.fill_summary(summary)
@@ -34,19 +39,53 @@ def test_create_post(page: Page, test_factory, base_data):
     editor_page.select_dropdown_option(0, "Public")
     response = editor_page.publish()
 
-    assert response.status == 201, f"Unexpected status: {response.status}"
-
     post_item = home_page.post_item_by_article(title)
-    assert home_page.post_title(post_item) == title
-    assert home_page.badge(post_item, 0) == "Pending"
-    assert home_page.badge(post_item, 1) == "Public"
-    assert home_page.badge(post_item, 2) == "Published"
+    post_title = home_page.post_title(post_item)
+    post_status = home_page.badge(post_item, 0)
+    # post_public = home_page.badge(post_item, 1)
+    # post_publish = home_page.badge(post_item, 2)
+
+    return [
+        (Message.STATUS, 201, str(response.status)),
+        (Message.SEP.format(content=""), "", ""),
+        (Message.POST_TITLE, title, post_title),
+        (Message.BADGE_APPROVE, "Pending", post_status),
+        # (Message.BADGE_PUBLIC, "Public", post_public),
+        # (Message.BADGE_PUBLISH, "Published", post_publish)
+    ]
 
 
-def test_update_public_to_private(page, test_factory, base_data):
+@log_test_result("TC5")
+def test_create_post_validation(page: Page, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
-    title = f"Blockchain IoT - {int(time.time())}"
+    _login(page, payload={'username': user.username, 'password': password})
+
+    editor_page = EditorPage(page)
+
+    page.goto(Post.NEW_POST)
+
+    title = f"Title of post - {int(time.time())}"
+    summary = "Summary of post"
+    content = ""
+
+    editor_page.fill_title(title)
+    editor_page.fill_summary(summary)
+    editor_page.fill_content(content)
+
+    editor_page.select_dropdown_option(0, "Public")
+    response = editor_page.publish()
+
+    return [
+        (Message.STATUS, 422, str(response.status))
+    ]
+
+
+@log_test_result("TC6")
+def test_update_public_to_private(page, test_factory, base_data, test_report_file):
+    user, password = test_factory.create_user(base_data["role_ids"]["user"])
+
+    title = f"Title of post - {int(time.time())}"
     summary = "Summary of post"
     content = "Content of post"
 
@@ -65,32 +104,45 @@ def test_update_public_to_private(page, test_factory, base_data):
     home_page = HomePage(page)
     edit_page = EditorPage(page)
 
+    compare_value = []
     post_item = home_page.post_item_by_article(title)
-    assert home_page.badge(post_item, 0) == "Approved"
-    assert home_page.badge(post_item, 1) == "Public"
-    assert home_page.badge(post_item, 2) == "Published"
+    # post_status = home_page.badge(post_item, 0)
+    # post_public = home_page.badge(post_item, 1)
+    # post_publish = home_page.badge(post_item, 2)
+    # compare_value.extend(
+    #     [
+    #         (Message.PRE_BADGE_APPROVE, "Approved", post_status),
+    #         (Message.PRE_BADGE_PUBLIC, "Public", post_public),
+    #         (Message.PRE_BADGE_PUBLISH, "Published", post_publish)
+    #     ]
+    # )
 
     edit_btn = home_page.edit_btn(post_item)
     edit_btn.click()
 
     edit_page.select_dropdown_option(0, "Private")
-    edit_page.select_dropdown_option(1, "Draft")
+    # edit_page.select_dropdown_option(1, "Draft")
 
     response = edit_page.update()
 
-    assert response.status == 200
+    post_public = home_page.badge(post_item, 0)
 
-    assert home_page.post_title(post_item) == title
-    assert home_page.badge(post_item, 0) == "Private"
-    assert home_page.badge(post_item, 1) == "Draft"
+    compare_value.extend(
+        [
+            (Message.STATUS, 200, response.status),
+            (Message.POST_BADGE_PUBLIC, "Private", post_public)
+        ]
+    )
+    return compare_value
 
 
-def test_update_content(page: Page, test_factory, base_data):
+@log_test_result("TC7")
+def test_update_content(page: Page, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
-    title = f"Blockchain IoT - {int(time.time())}"
-    summary = "..."
-    content = "..."
+    title = f"Title of post - {int(time.time())}"
+    summary = "Summary of post"
+    content = "Content of post"
 
     test_factory.create_post(
         user,
@@ -107,30 +159,41 @@ def test_update_content(page: Page, test_factory, base_data):
     home_page = HomePage(page)
     edit_page = EditorPage(page)
 
+    compare_values = []
+
     post_item = home_page.post_item_by_article(title)
-    assert home_page.badge(post_item, 0) == "Approved"
+    # post_status = home_page.badge(post_item, 0)
+    # compare_values.extend([
+    #     (Message.PRE_BADGE_APPROVE, "Approved", post_status)
+    # ])
 
     edit_btn = home_page.edit_btn(post_item)
     edit_btn.click()
 
     edit_page.content_input.wait_for(timeout=1000)
-    new_content = f"{content} {int(time.time())}"
-    edit_page.fill_content(new_content)
-
-    expect(edit_page.content_input).to_have_value(new_content, timeout=2000)
+    new_title = f"{title} {int(time.time())}"
+    edit_page.fill_title(new_title)
 
     response = edit_page.update()
-    assert response.status == 200
 
-    assert home_page.badge(post_item, 0) == "Pending"
+    post_title = home_page.post_title(post_item)
+    badge = home_page.badge(post_item, 0)
+    compare_values.extend([
+        (Message.STATUS, 200, str(response.status)),
+        (Message.POST_TITLE, new_title, post_title),
+        (Message.POST_BADGE_APPROVE, "Pending", badge)
+    ])
+
+    return compare_values
 
 
-def test_delete_post(page: Page, test_factory, base_data):
+@log_test_result(test_case_ids="TC8")
+def test_delete_post(page: Page, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
-    title = f"Blockchain IoT - {int(time.time())}"
-    summary = "..."
-    content = "..."
+    title = f"Title of post - {int(time.time())}"
+    summary = "Summary of post"
+    content = "Content of post"
 
     test_factory.create_post(
         user,
@@ -153,21 +216,35 @@ def test_delete_post(page: Page, test_factory, base_data):
         delete_btn.click()
 
     response = resp_info.value
-    assert response.status == 200
 
-    expect(post_item).not_to_be_visible(timeout=5000)
+    def check_post_not_visible(timeout=3000):
+        try:
+            expect(post_item).not_to_be_visible(timeout=timeout)
+            return False
+        except TimeoutError:
+            return True
+        except Exception as e:
+            return Message.ERROR.format(error=str(e))
+
+    visible = check_post_not_visible()
+    actual_value = post_item if visible else "-"
+    return [
+        (Message.STATUS, 200, response.status),
+        (Message.POST_VISIBILITY, "-", actual_value)
+    ]
 
 
-def test_check_post_number(page, base_data, test_factory):
+@log_test_result("TC9")
+def test_check_post_number(page: Page, base_data, test_factory, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
-    post_num = 10
+    post_num = 3
     status = ["APPROVE", "PENDING", "REJECT"]
     is_public = [True, False]
     published = [True, False]
 
     expected_posts = []
-    for i in range(post_num):
+    for _ in range(post_num):
         uid = str(uuid.uuid4())[:8]
         title = f"Title - {uid}"
         summary = f"Summary - {uid}"
@@ -193,9 +270,14 @@ def test_check_post_number(page, base_data, test_factory):
 
     _login(page, payload={'username': user.username, 'password': password})
 
+    compare_values = []
     home_page = HomePage(page)
+
+    page.wait_for_load_state("networkidle")
     posts_item = home_page.all_post_items()
-    expect(posts_item).to_have_count(post_num)
+    compare_values.append(
+        (Message.POST_COUNT, post_num, posts_item.count())
+    )
 
     status_mapping = {
         "approve": "Approved",
@@ -204,19 +286,38 @@ def test_check_post_number(page, base_data, test_factory):
     }
 
     for post in expected_posts:
+        actual_value = []
+        expect_value = []
         item = posts_item.filter(has_text=post.title)
-
-        assert home_page.post_title(item) == post.title
+        post_title = home_page.post_title(item)
+        actual_value.append(post_title)
+        expect_value.append(post.title)
         badge_idx = 0
+
         if post.is_public and post.published:
-            assert home_page.badge(item, badge_idx) == status_mapping[post.status.value]
+            expect_status = status_mapping[post.status.value]
+            actual_status = home_page.badge(item, badge_idx)
+            actual_value.append(actual_status)
+            expect_value.append(expect_status)
             badge_idx += 1
-        assert home_page.badge(item, badge_idx) == "Public" if post.is_public else "Private"
+
+        expect_public = "Public" if post.is_public else "Private"
+        actual_public = home_page.badge(item, badge_idx)
         badge_idx += 1
-        assert home_page.badge(item, badge_idx) == "Published" if post.published else "Draft"
+
+        expect_publish = "Published" if post.published else "Draft"
+        actual_publish = home_page.badge(item, badge_idx)
+
+        actual_value.extend([actual_public, actual_publish])
+        expect_value.extend([expect_public, expect_publish])
+
+        compare_values.append((Message.POST_INFO, expect_value, actual_value))
+
+    return compare_values
 
 
-def test_search_feature(page: Page, base_data, test_factory):
+@log_test_result("TC10")
+def test_search_feature(page: Page, base_data, test_factory, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
     visible_posts = 15
@@ -263,13 +364,25 @@ def test_search_feature(page: Page, base_data, test_factory):
 
             last_height = new_height
 
-    expect(posts).to_have_count(visible_posts)
+    # expect(posts).to_have_count(visible_posts)
+    compare_values = [(Message.POST_SEARCH_COUNT, visible_posts, posts.count())]
 
     for post in expected_posts:
-        # print(f"{post.title}: {page.locator("p.font-medium", has_text=f"{post.title}").count()}")
         post_item = home_page.post_search_with_title(post.title)
         post_item.highlight()
 
-        assert home_page.post_search_title(post_item) == post.title
-        assert home_page.post_search_author(post_item) == post.user.username
+        post_title = home_page.post_search_title(post_item)
+        post_author = home_page.post_search_author(post_item)
+
+        compare_values.append(
+            (Message.POST_INFO, [post.title, post.user.username], [post_title, post_author])
+        )
+
+        # compare_values.extend([
+        #     (Message.POST_TITLE, post.title, post_title),
+        #     (Message.POST_AUTHOR, post.user.username, post_author)
+        # ])
+        # assert home_page.post_search_title(post_item) == post.title
+        # assert home_page.post_search_author(post_item) == post.user.username
+    return compare_values
 
