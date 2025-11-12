@@ -12,6 +12,8 @@ from openpyxl.utils import column_index_from_string
 import pytest_check as check
 import logging
 
+from tests.pages import SafeActionError
+
 logger = logging.getLogger(__name__)
 #
 # EXCEL_FILE_NAME = "KichBanAutomationTest2.xlsx"
@@ -50,16 +52,26 @@ min_col = column_index_from_string(COL_ID)
 max_col = column_index_from_string(COL_EXPECT)
 
 
+def _normalize(value):
+    if isinstance(value, str):
+        return unicodedata.normalize('NFC', value.strip())
+    elif isinstance(value, list):
+        return [_normalize(x) for x in value]
+    elif isinstance(value, dict):
+        return {_normalize(k): _normalize(v) for k, v in value.items()}
+    return _normalize(str(value))
+
+
 def _check_and_log(actual_value, expected_value, item_name):
-    actual_norm = unicodedata.normalize('NFC', str(actual_value).strip())
-    expected_norm = unicodedata.normalize('NFC', str(expected_value).strip())
+    actual_norm = _normalize(actual_value)
+    expected_norm = _normalize(expected_value)
 
-    check.equal(actual_norm, expected_norm, f"FAIL: Mục '{item_name}' bị sai. Thực tế: {actual_value}, Mong đợi: {expected_value}")
+    check.equal(
+        actual_norm,
+        expected_norm,
+        f"FAIL: Mục '{item_name}' bị sai. Thực tế: {actual_value}, Mong đợi: {expected_value}"
+    )
 
-    # if actual_norm == expected_norm:
-    #     return actual_value
-    # else:
-    #     return f"[FAIL - Thực tế: {actual_value}]"
     return actual_value
 
 
@@ -159,11 +171,19 @@ def log_test_result(test_case_ids: Union[str, list[str]]):
                 compare_values = func(*args, **kwargs)
                 for display_name, expected_val, actual_val in compare_values:
                     expected_detail_parts.append(f"[{display_name}]: {expected_val}")
-                    expected_data_parts.append(f"{expected_val}")
 
+                    expected_data_parts.append(serialize_data(expected_val))
                     logged_actual_val = _check_and_log(actual_val, expected_val, display_name)
-                    actual_data_parts.append(f"{logged_actual_val}")
+                    actual_data_parts.append(serialize_data(logged_actual_val))
+
+                    # expected_data_parts.append(f"{expected_val}")
+                    # logged_actual_val = _check_and_log(actual_val, expected_val, display_name)
+                    # actual_data_parts.append(f"{logged_actual_val}")
                 status = "P"
+            except SafeActionError as e:
+                status = "F"
+                actual_data = str(e)
+                raise e
             except Exception as e:
                 status = "F"
                 if not actual_data_parts:
@@ -211,73 +231,12 @@ def compare_set(expect_value: set, actual_value: set):
     return result
 
 
-# def log_test_result(test_case_ids: Union[str, list[str]]):
-#     def decorator(func):
-#         @functools.wraps(func)
-#         def wrapper(*args, **kwargs):
-#             final_test_case_id = None
-#
-#             if isinstance(test_case_ids, str):
-#                 final_test_case_id = test_case_ids
-#             elif isinstance(test_case_ids, list):
-#                 current_lang = kwargs.get("lang")
-#                 if not current_lang:
-#                     raise ValueError(f"Tham số 'lang' bị thiếu khi cung cấp danh sách ID: {test_case_ids}")
-#
-#                 lang_index = LANG_INDEX_MAP.get(current_lang)
-#                 if lang_index is None or lang_index >= len(test_case_ids):
-#                     raise ValueError(f"Ngôn ngữ/index '{current_lang}' không khớp với list ID: {test_case_ids}.")
-#
-#                 final_test_case_id = test_case_ids[lang_index]
-#
-#             if not final_test_case_id:
-#                 raise ValueError("Không thể xác định Test Case ID cuối cùng.")
-#
-#             expected_items_config = get_expected_items(final_test_case_id)
-#
-#             file_path = kwargs.get("test_report_file")
-#             if not file_path:
-#                 raise ValueError(
-#                     f"Hàm test {func.__name__} phải nhận 'test_report_file' làm tham số"
-#                 )
-#
-#             status = 'F'
-#             expected_message_parts = []
-#             actual_message_parts = []
-#             actual_message = ""
-#             expected_message = ""
-#             had_error = False
-#
-#             try:
-#                 actual_values_dict = func(*args, **kwargs)
-#                 status = 'T'
-#                 for key, display_name, expected_val in expected_items_config:
-#                     expected_message_parts.append(f"[{display_name}]: {expected_val}")
-#                     actual_val = actual_values_dict.get(key, "[LỖI CODE - KHÔNG TÌM THẤY KEY]")
-#
-#                     logged_actual_val = _check_and_log(actual_val, expected_val, display_name)
-#                     actual_message_parts.append(f"[{display_name}]: {logged_actual_val}")
-#                 status = "T"
-#             except (Failed, Exception) as e:
-#                 status = "F"
-#                 if not actual_message_parts:
-#                     actual_message = f"LỖI HỆ THỐNG: {str(e)}"
-#                 raise e
-#
-#             finally:
-#                 if not actual_message:
-#                     actual_message = '\n'.join(actual_message_parts)
-#                     expected_message = '\n'.join(expected_message_parts)
-#
-#                 if check.any_failures():
-#                     status = "F"
-#
-#                 update_excel_result(
-#                     file_path=file_path,
-#                     test_case_id=final_test_case_id,
-#                     status=status,
-#                     actual_result=actual_message,
-#                     expected_result=expected_message
-#                 )
-#         return wrapper
-#     return decorator
+def serialize_data(value, _format="yaml"):
+    if isinstance(value, (dict, list)):
+        if _format == "json":
+            import json
+            return json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True)
+        elif _format == "yaml":
+            import yaml
+            return yaml.dump(value, allow_unicode=True, sort_keys=False, default_flow_style=False)
+    return str(value)

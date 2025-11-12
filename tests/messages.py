@@ -43,6 +43,7 @@ class HomeMsg:
 
 
 class EditMsg:
+    EDIT_PAGE = "Trang chỉnh sửa bài viết"
     BTN_PUBLISH = "Nút xuất bản bài viết"
     BTN_DRAFT = "Nút lưu bản nháp"
     BTN_UPDATE = "Nút cập nhật bài viết"
@@ -102,6 +103,7 @@ class DialogMsg:
     COLUMN = "Cột {name}"
 
 class AdminHomeMsg:
+    ADMIN_HOME = "Trang chủ admin"
     HOME_TITLE = "Tiêu đề trang chủ"
     BTN_LOGOUT = "Nút đăng xuất"
     POST_MANAGE_CARD_TITLE = "Tiêu đề thẻ quản lý bài viết"

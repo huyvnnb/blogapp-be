@@ -1,11 +1,55 @@
+import functools
 from typing import List, Union, Optional
 
 from playwright.sync_api import Page, Locator, Response
+from playwright.sync_api import TimeoutError, Error as PlaywrightError
 import unicodedata
 
 
 def norm(text: str) -> str:
     return unicodedata.normalize("NFC", text.strip())
+
+
+class SafeActionError(Exception):
+    pass
+
+
+def safe_action(action_desc: str = "Không tìm thấy component trong trang"):
+    def decorator(func):
+        if isinstance(func, property):
+            fget = func.fget
+
+            @property
+            @functools.wraps(fget)
+            def wrapped(self):
+                try:
+                    return fget(self)
+                except TimeoutError:
+                    raise SafeActionError(f"{action_desc}: Phần tử không xuất hiện")
+                except AttributeError:
+                    raise SafeActionError(f"{action_desc}: Element không có thuộc tính click/fill")
+                except PlaywrightError as e:
+                    raise SafeActionError(f"{action_desc}: Lỗi Playwright - {e}")
+                except Exception as e:
+                    raise SafeActionError(f"{action_desc}: Lỗi hệ thống - {e}")
+
+            return wrapped
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except TimeoutError:
+                raise SafeActionError(f"{action_desc}: Phần tử không xuất hiện")
+            except AttributeError:
+                raise SafeActionError(f"{action_desc}: Element không có thuộc tính click/fill")
+            except PlaywrightError as e:
+                raise SafeActionError(f"{action_desc}: Lỗi Playwright - {e}")
+            except Exception as e:
+                raise SafeActionError(f"{action_desc}: Lỗi hệ thống - {e}")
+
+        return wrapper
+    return decorator
 
 
 class NavBar:
@@ -74,17 +118,6 @@ class NavBar:
     def choose_lang(self, lang: str = "en"):
         self.multi_lang.click()
         self.page.locator(f"#{lang}").click()
-        # if lang == "vi":
-        #     self.page.locator("div[role='menuitem']").nth(0).click()
-        # else:
-        #     self.page.locator("div[role='menuitem']").nth(1).click()
-
-    # def choose_lang(self, lang: str = "en"):
-    #     self.multi_lang.click()
-    #     if lang == "vi":
-    #         self.page.locator("div[role='menuitem']").nth(0).click()
-    #     else:
-    #         self.page.locator("div[role='menuitem']").nth(1).click()
 
 
 class HomePage(NavBar):

@@ -22,8 +22,8 @@ def _login(page: Page, payload: dict):
     return response
 
 
-@log_test_result(test_case_ids="TC1")
-def test_login(page: Page, test_factory, base_data, test_report_file: str):
+@log_test_result(test_case_ids="TC1.1")
+def test_login_check_status_code(page: Page, test_factory, base_data, test_report_file: str):
     user, password = test_factory.create_user(role_id=base_data["role_ids"]['user'])
 
     login_page = Auth.LOGIN
@@ -34,20 +34,35 @@ def test_login(page: Page, test_factory, base_data, test_report_file: str):
     with page.expect_response("**/auth/login") as resp_info:
         page.click("button[type='submit']")
 
-    page.wait_for_url("**/home")
-
     response = resp_info.value
 
-    actual_status = str(response.status)
+    return [
+        (Message.STATUS, "200", response.status),
+    ]
+
+
+@log_test_result(test_case_ids="TC1.2")
+def test_login_check_redirect(page: Page, test_factory, base_data, test_report_file: str):
+    user, password = test_factory.create_user(role_id=base_data["role_ids"]['user'])
+
+    login_page = Auth.LOGIN
+    page.goto(login_page)
+
+    page.fill("input[type='text'][name='username']", user.username)
+    page.fill("input[type='password'][name='password']", password)
+    with page.expect_response("**/auth/login"):
+        page.click("button[type='submit']")
+
+    page.wait_for_url("**/home")
+
     actual_path = urlparse(page.url).path
 
     return [
-        (Message.STATUS, "200", actual_status),
         (Message.URL_PATH, "/home", actual_path)
     ]
 
 
-@log_test_result(test_case_ids="TC2")
+@log_test_result(test_case_ids="TC1.3")
 def test_login_user_not_exist(page: Page, test_report_file: str):
     login_page = Auth.LOGIN
     page.goto(login_page)

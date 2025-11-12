@@ -7,7 +7,7 @@ from tests.test_user_auth import _login
 from tests.testcase_helper import log_test_result
 
 
-@log_test_result(test_case_ids="TC3")
+@log_test_result(test_case_ids="TC2")
 def test_logout(page: Page, api_request: APIRequestContext, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
 
@@ -36,7 +36,7 @@ def test_logout(page: Page, api_request: APIRequestContext, test_factory, base_d
     ]
 
 
-@log_test_result(test_case_ids="TC18")
+@log_test_result(test_case_ids="TC11")
 def test_user_approve_post(page, api_request, test_factory, base_data, test_report_file):
     user, password = test_factory.create_user(base_data["role_ids"]["user"])
     post = test_factory.create_post(

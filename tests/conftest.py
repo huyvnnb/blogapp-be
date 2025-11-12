@@ -27,7 +27,7 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 
 ROOT_DIR = Path(__file__).parent
 TEMPLATE_DIR = ROOT_DIR / "test_case"
-TEMPLATE_NAME = "KichBanAutomationTest2.xlsx"
+TEMPLATE_NAME = "KichBanAutomationTest-v3.xlsx"
 TEMPLATE_PATH = TEMPLATE_DIR / TEMPLATE_NAME
 TEST_CASE_RESULT_DIR = ROOT_DIR / "test_case_result"
 TEST_CASE_RESULT_DIR.mkdir(parents=True, exist_ok=True)
